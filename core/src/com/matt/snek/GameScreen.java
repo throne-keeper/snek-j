@@ -11,7 +11,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 public class GameScreen implements Screen {
 
-    private static final int SAFE_AREA = 600 - 20;
+    private static final int HORIZONTAL_SAFE_AREA = 750;
+    private static final int VERTICAL_SAFE_AREA = 550;
+    private Direction currentDirection;
 
 
     private Texture dotImage;
@@ -30,6 +32,7 @@ public class GameScreen implements Screen {
         head.y = 600 / 2;
         head.width = 25;
         head.height = 25;
+        currentDirection = Direction.RIGHT;
     }
 
     private void move() {
@@ -44,15 +47,54 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE))
             Gdx.app.exit();
 
-        if (head.x < 0)
-            head.x = 0;
-        if (head.x > SAFE_AREA)
-            head.x = SAFE_AREA;
+    }
 
-        if (head.y < 0)
-            head.y = 0;
-        if (head.y > SAFE_AREA)
-            head.y = SAFE_AREA;
+    private boolean outsideSafeArea() {
+        if (head.x < 25) {
+            head.x = 25;
+            return true;
+        }
+        if (head.x > HORIZONTAL_SAFE_AREA) {
+            head.x = HORIZONTAL_SAFE_AREA;
+            return true;
+        }
+
+        if (head.y < 25) {
+            head.y = 25;
+            return true;
+        }
+
+        if (head.y > VERTICAL_SAFE_AREA) {
+            head.y = VERTICAL_SAFE_AREA;
+            return true;
+        }
+        return false;
+    }
+
+    private void move(Direction direction) {
+        System.out.println("(" + head.x + ", " + head.y + ")");
+        switch (direction) {
+            case UP:
+                if (!outsideSafeArea()) {
+                    head.y += head.height;
+                    break;
+                }
+            case DOWN:
+                if (!outsideSafeArea()) {
+                    head.y -= head.height;
+                    break;
+                }
+            case LEFT:
+                if (!outsideSafeArea()) {
+                    head.x -= head.width;
+                    break;
+                }
+            case RIGHT:
+                if (!outsideSafeArea()) {
+                    head.x += head.width;
+                    break;
+                }
+        }
 
     }
 
@@ -69,7 +111,14 @@ public class GameScreen implements Screen {
         game.getBatch().begin();
         game.getBatch().draw(dotImage, head.x, head.y, head.width, head.height);
         game.getBatch().end();
-        move();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT))
+            move(Direction.LEFT);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT))
+            move(Direction.RIGHT);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP))
+            move(Direction.UP);
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN))
+            move(Direction.DOWN);
     }
 
     @Override
