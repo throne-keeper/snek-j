@@ -1,6 +1,5 @@
 package com.matt.snek;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -12,6 +11,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 
 public class GameScreen implements Screen {
 
+    private static final int SAFE_AREA = 600 - 20;
+
+
     private Texture dotImage;
     private Rectangle head;
     private GameEngine game;
@@ -21,27 +23,37 @@ public class GameScreen implements Screen {
         this.game = game;
         dotImage = new Texture(Gdx.files.internal("dot.png"));
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 600, 600);
+        camera.setToOrtho(false, 800, 600);
         head = new Rectangle();
+
         head.x = 600 / 2;
         head.y = 600 / 2;
-        head.width = 20;
-        head.height = 20;
+        head.width = 25;
+        head.height = 25;
     }
 
     private void move() {
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT))
-            head.x -= 200 * Gdx.graphics.getDeltaTime();
-        if (Gdx.input.isKeyPressed(Input.Keys.UP))
-            head.y += 200 * Gdx.graphics.getDeltaTime();
-        if (Gdx.input.isKeyPressed(Input.Keys.DOWN))
-            head.y -= 200 * Gdx.graphics.getDeltaTime();
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT))
-            head.x += 200 * Gdx.graphics.getDeltaTime();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT))
+            head.x -= head.width;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.UP))
+            head.y += head.height;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN))
+            head.y -= head.height;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT))
+            head.x += head.width;
+        if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE))
+            Gdx.app.exit();
+
         if (head.x < 0)
             head.x = 0;
-        if (head.y > 600)
-            head.y = 600;
+        if (head.x > SAFE_AREA)
+            head.x = SAFE_AREA;
+
+        if (head.y < 0)
+            head.y = 0;
+        if (head.y > SAFE_AREA)
+            head.y = SAFE_AREA;
+
     }
 
     @Override
