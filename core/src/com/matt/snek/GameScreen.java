@@ -10,14 +10,14 @@ import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
-
-import java.util.Iterator;
+import com.matt.snek.helper.Coordinate;
 
 public class GameScreen implements Screen {
 
     private static final int HORIZONTAL_SAFE_AREA = 800 - 25;
     private static final int VERTICAL_SAFE_AREA = 600 - 25;
     private Direction currentDirection;
+    private Coordinate initialCoordinate;
 
     private Sound bopSound;
 
@@ -29,8 +29,8 @@ public class GameScreen implements Screen {
 
     private GameEngine game;
     private OrthographicCamera camera;
+    private Array<Node> nodes;
 
-    private Array<Rectangle> nodes;
 
     public GameScreen(GameEngine game) {
         this.game = game;
@@ -39,16 +39,29 @@ public class GameScreen implements Screen {
         bopSound = Gdx.audio.newSound(Gdx.files.internal("bop1.mp3"));
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
-        head = new Rectangle();
-
-        head.x = 600 / 2;
-        head.y = 600 / 2;
-        head.width = 25;
-        head.height = 25;
+        nodes = initialSnek(4);
+        initialCoordinate = new Coordinate(HORIZONTAL_SAFE_AREA / 2, VERTICAL_SAFE_AREA / 2);
+//        head = new Rectangle();
+//
+//        head.x = 600 / 2;
+//        head.y = 600 / 2;
+//        head.width = 25;
+//        head.height = 25;
         food = drawFood();
-        nodes = new Array<>();
-        nodes.add(head);
-        currentDirection = Direction.RIGHT;
+//        nodes = new Array<>();
+//        nodes.add(head);
+//        currentDirection = Direction.RIGHT;
+    }
+
+    private Array<Node> initialSnek(int size) {
+        Array<Node> newNodes = new Array<>();
+        for (int i = 0; i < size; i++) {
+            var node = new Node(i);
+            node.setWidth(25);
+            node.setHeight(25);
+            newNodes.add(node);
+        }
+        return newNodes;
     }
 
     private Rectangle drawFood() {
@@ -69,13 +82,13 @@ public class GameScreen implements Screen {
         food.y = horizontalPos;
     }
 
-    private void addNode() {
-        Rectangle node = new Rectangle();
-        node.width = 25;
-        node.height = 25;
-        nodes.add(node);
-        System.out.println("Nodes: " + nodes.size);
-    }
+//    private void addNode() {
+//        Rectangle node = new Rectangle();
+//        node.width = 25;
+//        node.height = 25;
+//        nodes.add(node);
+//        System.out.println("Nodes: " + nodes.size);
+//    }
 
     private void move(Direction direction) {
         switch (direction) {
@@ -114,19 +127,6 @@ public class GameScreen implements Screen {
 
     }
 
-    private void drawRelativeNode(Rectangle rect) {
-        game.getBatch().draw(dotImage, (rect.x - rect.width) * nodes.size, rect.y, rect.width, rect.height);
-    }
-
-    private void drawNodes() {
-        Iterator<Rectangle> iter = nodes.iterator();
-        while (iter.hasNext()) {
-            Rectangle node = iter.next();
-            node.x = node.x - node.width;
-            game.getBatch().draw(dotImage, head.x, head.y, head.width, head.height);
-        }
-    }
-
     @Override
     public void render(float delta) {
         ScreenUtils.clear(0, 0, 0.2f, 1);
@@ -134,7 +134,18 @@ public class GameScreen implements Screen {
         game.getBatch().setProjectionMatrix(camera.combined);
         game.getBatch().begin();
         game.getBatch().draw(foodImage, food.x, food.y);
-        game.getBatch().draw(dotImage, head.x, head.y, head.width, head.height);
+        for (int i = 0; i < nodes.size; i++) {
+            Node currentNode = nodes.get(i);
+            if (currentNode.getNodePosition() == 0) {
+                currentNode.setX(initialCoordinate.getX());
+                currentNode.setY(initialCoordinate.getY());
+            } else {
+                Node lastNode = nodes.get(i-1);
+                currentNode.setX(lastNode.getX() - lastNode.getWidth());
+                currentNode.setY(lastNode.getY());
+            }
+            game.getBatch().draw(dotImage, currentNode.getX(), currentNode.getY());
+        }
         game.getFont().draw(game.getBatch(), "Score: " + nodes.size, HORIZONTAL_SAFE_AREA - 50, VERTICAL_SAFE_AREA - 50);
         game.getBatch().end();
         if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
@@ -156,10 +167,10 @@ public class GameScreen implements Screen {
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE))
             Gdx.app.exit();
 
-        if (head.overlaps(food)) {
-            moveFood();
-            addNode();
-        }
+//        if (head.overlaps(food)) {
+//            moveFood();
+////            addNode();
+//        }
     }
 
     @Override
