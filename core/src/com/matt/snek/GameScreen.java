@@ -31,6 +31,7 @@ public class GameScreen implements Screen {
 
     private Sound bopSound;
     private Sound yumSound;
+    private Sound deathSound;
 
     private Texture dotImage;
     private Texture foodImage;
@@ -38,12 +39,15 @@ public class GameScreen implements Screen {
     private GameEngine game;
     private Array<Node> nodes;
 
+    private String scoreLabel = "Score: %d";
+
     public GameScreen(GameEngine game) {
         this.game = game;
         dotImage = new Texture(Gdx.files.internal("dot.png"));
         foodImage = new Texture(Gdx.files.internal("yum.png"));
         bopSound = Gdx.audio.newSound(Gdx.files.internal("bop1.mp3"));
         yumSound = Gdx.audio.newSound(Gdx.files.internal("yumSound.mp3"));
+        deathSound = Gdx.audio.newSound(Gdx.files.internal("deathSound.mp3"));
         nodes = new Array<>();
     }
 
@@ -61,6 +65,7 @@ public class GameScreen implements Screen {
         Gdx.gl.glClearColor(0, 0, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.getBatch().begin();
+        game.getFont().draw(game.getBatch(), String.format(scoreLabel, nodes.size), 10, 150);
         game.getBatch().draw(dotImage, headX, headY);
         for (Node node : nodes) {
             node.draw(game.getBatch(), headX, headY);
@@ -176,23 +181,29 @@ public class GameScreen implements Screen {
     private void checkSelfCollision() {
         for (Node node : nodes) {
             if (node.getX() == headX && node.getY() == headY)
-                hit = true;
+                die();
         }
+    }
+
+    private void die() {
+        hit = true;
+        deathSound.play();
     }
 
     private void checkBoundary() {
         if (headX >= Gdx.graphics.getWidth())
-            headX = 0;
+            die();
         if (headX < 0)
-            headX = Gdx.graphics.getWidth() - HEAD_LENGTH;
+            die();
         if (headY >= Gdx.graphics.getHeight())
-            headY = 0;
+            die();
         if (headY < 0)
-            headY = Gdx.graphics.getHeight() - HEAD_LENGTH;
+            die();
     }
 
     @Override
     public void resize(int width, int height) {
+
 
     }
 
