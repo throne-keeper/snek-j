@@ -4,122 +4,47 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
-import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.ScreenUtils;
-import com.matt.snek.helper.Coordinate;
 
 public class GameScreen implements Screen {
 
-    private static final int HORIZONTAL_SAFE_AREA = 800 - 25;
-    private static final int VERTICAL_SAFE_AREA = 600 - 25;
-    private Direction currentDirection;
-    private Coordinate initialCoordinate;
+    private static final float UPDATE = 1f;
+    private static final int HEAD_LENGTH = 32;
+
+    private int headX = 0;
+    private int headY = 0;
+
+    private int foodX;
+    private int foodY;
+
+    private int headXBeforeUpdate = 0;
+    private int headYBeforeUpdate = 0;
+    private float timer = UPDATE;
+
+    private Direction currentDirection = Direction.UP;
+    private boolean foodAvailable = false;
+    private boolean hit = false;
 
     private Sound bopSound;
+    private Sound yumSound;
 
     private Texture dotImage;
     private Texture foodImage;
-
-    private Rectangle head;
     private Rectangle food;
-
     private GameEngine game;
-    private OrthographicCamera camera;
     private Array<Node> nodes;
-
 
     public GameScreen(GameEngine game) {
         this.game = game;
         dotImage = new Texture(Gdx.files.internal("dot.png"));
         foodImage = new Texture(Gdx.files.internal("yum.png"));
         bopSound = Gdx.audio.newSound(Gdx.files.internal("bop1.mp3"));
-        camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800, 600);
-        nodes = initialSnek(4);
-        initialCoordinate = new Coordinate(HORIZONTAL_SAFE_AREA / 2, VERTICAL_SAFE_AREA / 2);
-//        head = new Rectangle();
-//
-//        head.x = 600 / 2;
-//        head.y = 600 / 2;
-//        head.width = 25;
-//        head.height = 25;
-        food = drawFood();
-//        nodes = new Array<>();
-//        nodes.add(head);
-//        currentDirection = Direction.RIGHT;
-    }
-
-    private Array<Node> initialSnek(int size) {
-        Array<Node> newNodes = new Array<>();
-        for (int i = 0; i < size; i++) {
-            var node = new Node(i);
-            node.setWidth(25);
-            node.setHeight(25);
-            newNodes.add(node);
-        }
-        return newNodes;
-    }
-
-    private Rectangle drawFood() {
-       float verticalPos = MathUtils.random(0, VERTICAL_SAFE_AREA);
-       float horizontalPos = MathUtils.random(0, HORIZONTAL_SAFE_AREA);
-       Rectangle yum = new Rectangle();
-       yum.x = verticalPos;
-       yum.y = horizontalPos;
-       yum.width = 15;
-       yum.height = 15;
-       return yum;
-    }
-
-    private void moveFood() {
-        float verticalPos = MathUtils.random(0, VERTICAL_SAFE_AREA);
-        float horizontalPos = MathUtils.random(0, HORIZONTAL_SAFE_AREA);
-        food.x = verticalPos;
-        food.y = horizontalPos;
-    }
-
-//    private void addNode() {
-//        Rectangle node = new Rectangle();
-//        node.width = 25;
-//        node.height = 25;
-//        nodes.add(node);
-//        System.out.println("Nodes: " + nodes.size);
-//    }
-
-    private void move(Direction direction) {
-        switch (direction) {
-        case UP:
-            if ((head.y + head.height) > VERTICAL_SAFE_AREA) {
-                head.y = VERTICAL_SAFE_AREA;
-            } else {
-                head.y += head.height;
-            }
-            break;
-        case DOWN:
-            if ((head.y + head.height) < 50) {
-                head.y = 0;
-            } else {
-                head.y -= head.height;
-            }
-            break;
-        case LEFT:
-            if ((head.x + head.x) < 25) {
-                head.x = 0;
-            } else {
-                head.x -= head.height;
-            }
-            break;
-        case RIGHT:
-            if ((head.x > HORIZONTAL_SAFE_AREA - head.height)) {
-                head.x = HORIZONTAL_SAFE_AREA;
-            } else {
-                head.x += head.height;
-            }
-        }
+        yumSound = Gdx.audio.newSound(Gdx.files.internal("yumSound.mp3"));
+        nodes = new Array<>();
     }
 
     @Override
@@ -129,48 +54,141 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        ScreenUtils.clear(0, 0, 0.2f, 1);
-        camera.update();
-        game.getBatch().setProjectionMatrix(camera.combined);
+        pollInput();
+        updateSnek(delta);
+        handleEatFood();
+        placeFood();
+        Gdx.gl.glClearColor(0, 0, 0.2f, 1);
+        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.getBatch().begin();
-        game.getBatch().draw(foodImage, food.x, food.y);
-        for (int i = 0; i < nodes.size; i++) {
-            Node currentNode = nodes.get(i);
-            if (currentNode.getNodePosition() == 0) {
-                currentNode.setX(initialCoordinate.getX());
-                currentNode.setY(initialCoordinate.getY());
-            } else {
-                Node lastNode = nodes.get(i-1);
-                currentNode.setX(lastNode.getX() - lastNode.getWidth());
-                currentNode.setY(lastNode.getY());
-            }
-            game.getBatch().draw(dotImage, currentNode.getX(), currentNode.getY());
+        game.getBatch().draw(dotImage, headX, headY);
+        for (Node node : nodes) {
+            node.draw(game.getBatch(), headX, headY);
         }
-        game.getFont().draw(game.getBatch(), "Score: " + nodes.size, HORIZONTAL_SAFE_AREA - 50, VERTICAL_SAFE_AREA - 50);
+        if (foodAvailable) {
+            game.getBatch().draw(foodImage, foodX, foodY);
+        }
         game.getBatch().end();
+    }
+
+    private void placeFood() {
+        if (!foodAvailable) {
+            do {
+                foodX = MathUtils.random(Gdx.graphics.getWidth() / HEAD_LENGTH - 1) * HEAD_LENGTH;
+                foodY = MathUtils.random(Gdx.graphics.getHeight() / HEAD_LENGTH - 1) * HEAD_LENGTH;
+                foodAvailable = true;
+            } while (foodX == headX && foodY == foodY);
+        }
+    }
+
+    private void handleEatFood() {
+        if (foodAvailable && (foodX == headX) && (foodY == headY)) {
+            Node node = new Node(dotImage);
+            node.move(headX, headY);
+            nodes.insert(0, node);
+            foodAvailable = false;
+            yumSound.play();
+        }
+    }
+
+    private void updateSnek(float deltaTime) {
+        if (!hit) {
+            timer -= deltaTime;
+            if (timer <= 0) {
+                timer = UPDATE;
+                moveSnek();
+                checkBoundary();
+                updateBody();
+                checkSelfCollision();
+            }
+        }
+    }
+
+    private void pollInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) {
-            move(Direction.LEFT);
-            bopSound.play();
+            updateDirection(Direction.LEFT);
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) {
-            move(Direction.RIGHT);
-            bopSound.play();
+            updateDirection(Direction.RIGHT);
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) {
-            move(Direction.UP);
-            bopSound.play();
+            updateDirection(Direction.UP);
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.DOWN)) {
-            move(Direction.DOWN);
-            bopSound.play();
+            updateDirection(Direction.DOWN);
         }
-        if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE))
+        if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
+        }
+    }
 
-//        if (head.overlaps(food)) {
-//            moveFood();
-////            addNode();
-//        }
+    private void playMoveSound() {
+        bopSound.play();
+    }
+
+    private void moveSnek() {
+        headXBeforeUpdate = headX;
+        headYBeforeUpdate = headY;
+        playMoveSound();
+        switch (currentDirection) {
+            case RIGHT:
+                headX += HEAD_LENGTH;
+                break;
+            case LEFT:
+                headX -= HEAD_LENGTH;
+                break;
+            case UP:
+                headY += HEAD_LENGTH;
+                break;
+            case DOWN:
+                headY -= HEAD_LENGTH;
+                break;
+        }
+    }
+
+    private void updateDirection(Direction newDirection, Direction oppositeDirection) {
+        if ((currentDirection != oppositeDirection) || (nodes.size == 0)) {
+            currentDirection = newDirection;
+        }
+    }
+
+    private void updateDirection(Direction direction) {
+        switch (direction) {
+            case LEFT:
+                updateDirection(direction, Direction.RIGHT);
+            case RIGHT:
+                updateDirection(direction, Direction.LEFT);
+            case UP:
+                updateDirection(direction, Direction.DOWN);
+            case DOWN:
+                updateDirection(direction, Direction.UP);
+        }
+    }
+
+    private void updateBody() {
+        if (nodes.size > 0) {
+            Node node = nodes.removeIndex(0);
+            node.move(headXBeforeUpdate, headYBeforeUpdate);
+            nodes.add(node);
+        }
+    }
+
+    private void checkSelfCollision() {
+        for (Node node : nodes) {
+            if (node.getX() == headX && node.getY() == headY)
+                hit = true;
+        }
+    }
+
+    private void checkBoundary() {
+        if (headX >= Gdx.graphics.getWidth())
+            headX = 0;
+        if (headX < 0)
+            headX = Gdx.graphics.getWidth() - HEAD_LENGTH;
+        if (headY >= Gdx.graphics.getHeight())
+            headY = 0;
+        if (headY < 0)
+            headY = Gdx.graphics.getHeight() - HEAD_LENGTH;
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.matt.snek;
 
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.math.Rectangle;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -11,9 +11,24 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class Node extends Rectangle {
+public class Node {
 
-//    private Texture image;
-    private int nodePosition;
+    private int x;
+    private int y;
+    private Texture texture;
+
+    public Node(Texture texture) {
+        this.texture = texture;
+    }
+
+    public void move(int x, int y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public void draw(SpriteBatch batch, int headX, int headY) {
+        if (!(x == headX && y == headY))
+            batch.draw(texture, x, y);
+    }
 
 }
