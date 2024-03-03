@@ -1,4 +1,4 @@
-package com.matt.snek;
+package com.matt.snek.lifecycle;
 
 public enum Direction {
     UP,

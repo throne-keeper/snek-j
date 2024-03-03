@@ -6,9 +6,12 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
+import com.matt.snek.lifecycle.Direction;
+import com.matt.snek.lifecycle.State;
 
 public class GameScreen implements Screen {
 
@@ -26,6 +29,8 @@ public class GameScreen implements Screen {
     private float timer = UPDATE;
 
     private Direction currentDirection = Direction.UP;
+    private State currentState = State.PLAYING;
+
     private boolean foodAvailable = false;
     private boolean hit = false;
 
@@ -40,6 +45,8 @@ public class GameScreen implements Screen {
     private Array<Node> nodes;
 
     private String scoreLabel = "Score: %d";
+    private String gameOverText = "GAME OVER!\nFinal Score: %d";
+    private GlyphLayout layout = new GlyphLayout();
 
     public GameScreen(GameEngine game) {
         this.game = game;
@@ -58,14 +65,29 @@ public class GameScreen implements Screen {
 
     @Override
     public void render(float delta) {
-        pollInput();
-        updateSnek(delta);
-        handleEatFood();
-        placeFood();
+        switch (currentState) {
+            case PLAYING:
+                pollInput();
+                updateSnek(delta);
+                handleEatFood();
+                placeFood();
+                break;
+            case GAME_OVER:
+                isRestart();
+                break;
+            case PAUSED:
+                pause();
+                break;
+        }
+
         Gdx.gl.glClearColor(0, 0, 0.2f, 1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT);
         game.getBatch().begin();
         game.getFont().draw(game.getBatch(), String.format(scoreLabel, nodes.size), 10, 150);
+        if (currentState == State.GAME_OVER) {
+            layout.setText(game.getFont(), gameOverText);
+            game.getFont().draw(game.getBatch(), String.format(gameOverText, nodes.size), Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
+        }
         game.getBatch().draw(dotImage, headX, headY);
         for (Node node : nodes) {
             node.draw(game.getBatch(), headX, headY);
@@ -124,6 +146,12 @@ public class GameScreen implements Screen {
         }
         if (Gdx.input.isKeyPressed(Input.Keys.ESCAPE)) {
             Gdx.app.exit();
+        }
+        if (Gdx.input.isKeyPressed(Input.Keys.P)) {
+            if (currentState.equals(State.PAUSED))
+                currentState = State.PLAYING;
+            else
+                currentState = State.PAUSED;
         }
     }
 
@@ -188,6 +216,24 @@ public class GameScreen implements Screen {
     private void die() {
         hit = true;
         deathSound.play();
+        currentState = State.GAME_OVER;
+    }
+
+    private void isRestart() {
+        if (Gdx.input.isKeyPressed(Input.Keys.SPACE))
+            restart();
+    }
+
+    private void restart() {
+        currentState = State.PLAYING;
+        nodes.clear();
+        currentDirection = Direction.UP;
+        timer = UPDATE;
+        headX = 0;
+        headY = 0;
+        headYBeforeUpdate = 0;
+        headXBeforeUpdate = 0;
+        foodAvailable = false;
     }
 
     private void checkBoundary() {
@@ -204,12 +250,11 @@ public class GameScreen implements Screen {
     @Override
     public void resize(int width, int height) {
 
-
     }
 
     @Override
     public void pause() {
-
+        System.out.println("PAUSED");
     }
 
     @Override
