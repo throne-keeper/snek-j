@@ -39,6 +39,7 @@ public class GameScreen implements Screen {
     private Sound deathSound;
 
     private Texture dotImage;
+    private Texture headImage;
     private Texture foodImage;
     private Rectangle food;
     private GameEngine game;
@@ -51,6 +52,7 @@ public class GameScreen implements Screen {
     public GameScreen(GameEngine game) {
         this.game = game;
         dotImage = new Texture(Gdx.files.internal("dot.png"));
+        headImage = new Texture(Gdx.files.internal("head.png"));
         foodImage = new Texture(Gdx.files.internal("yum.png"));
         bopSound = Gdx.audio.newSound(Gdx.files.internal("bop1.mp3"));
         yumSound = Gdx.audio.newSound(Gdx.files.internal("yumSound.mp3"));
@@ -88,7 +90,7 @@ public class GameScreen implements Screen {
             layout.setText(game.getFont(), gameOverText);
             game.getFont().draw(game.getBatch(), String.format(gameOverText, nodes.size), Gdx.graphics.getWidth()/2, Gdx.graphics.getHeight()/2);
         }
-        game.getBatch().draw(dotImage, headX, headY);
+        game.getBatch().draw(headImage, headX, headY);
         for (Node node : nodes) {
             node.draw(game.getBatch(), headX, headY);
         }
